@@ -16,10 +16,13 @@ def main():
     style_image = scipy.misc.imread(image_dir_path + "/monet.jpg")
     imshow(style_image)
 
-    ss = StyleTransfer()
-    ss.load_vgg19_model(pretrained_model_dir_path)
+    vgg19_model_path = pretrained_model_dir_path + "/imagenet-vgg-verydeep-19.mat"
+    ss = StyleTransfer(vgg19_model_path)
 
-    ss.fit(content_image, style_image, output_dir_path=output_dir_path)
+    generated_image = ss.fit_and_transform(content_image, style_image,
+                                           output_dir_path=output_dir_path)
+
+    imshow(generated_image)
 
 
 if __name__ == '__main__':

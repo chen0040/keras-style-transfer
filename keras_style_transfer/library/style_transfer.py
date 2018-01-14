@@ -173,16 +173,12 @@ def total_cost_test():
 
 
 class StyleTransfer(object):
-    def __init__(self):
+
+    def __init__(self, vgg19_model_path):
         self.model = None
+        self.vgg19_model_path = vgg19_model_path
 
-    def load_vgg19_model(self, model_dir_path):
-        vgg19_model_path = model_dir_path + "/imagenet-vgg-verydeep-19.mat"
-        download_vgg19(vgg19_model_path)
-        self.model = load_vgg_model(vgg19_model_path)
-        print(self.model)
-
-    def fit(self, content_image, style_image, output_dir_path, num_iterations=200):
+    def fit_and_transform(self, content_image, style_image, output_dir_path, num_iterations=200):
         STYLE_LAYERS = [
             ('conv1_1', 0.2),
             ('conv2_1', 0.2),
@@ -195,66 +191,74 @@ class StyleTransfer(object):
 
         input_image = generate_noise_image(content_image)
 
+        generated_image = input_image
+
         # Reset the graph
         tf.reset_default_graph()
 
-        with tf.Session() as sess:
+        sess = tf.InteractiveSession()
 
-            # Assign the content image to be the input of the VGG model.
-            sess.run(self.model['input'].assign(content_image))
+        download_vgg19(self.vgg19_model_path)
+        self.model = load_vgg_model(self.vgg19_model_path)
+        print(self.model)
 
-            # Select the output tensor of layer conv4_2
-            out = self.model['conv4_2']
+        # Assign the content image to be the input of the VGG model.
+        sess.run(self.model['input'].assign(content_image))
 
-            # Set a_C to be the hidden layer activation from the layer we have selected
-            a_C = sess.run(out)
+        # Select the output tensor of layer conv4_2
+        out = self.model['conv4_2']
 
-            # Set a_G to be the hidden layer activation from same layer. Here, a_G references model['conv4_2']
-            # and isn't evaluated yet. Later in the code, we'll assign the image G as the model input, so that
-            # when we run the session, this will be the activations drawn from the appropriate layer, with G as input.
-            a_G = out
+        # Set a_C to be the hidden layer activation from the layer we have selected
+        a_C = sess.run(out)
 
-            # Compute the content cost
-            J_content = compute_content_cost(a_C, a_G)
+        # Set a_G to be the hidden layer activation from same layer. Here, a_G references model['conv4_2']
+        # and isn't evaluated yet. Later in the code, we'll assign the image G as the model input, so that
+        # when we run the session, this will be the activations drawn from the appropriate layer, with G as input.
+        a_G = out
 
-            # Assign the input of the model to be the "style" image
-            sess.run(self.model['input'].assign(style_image))
+        # Compute the content cost
+        J_content = compute_content_cost(a_C, a_G)
 
-            # Compute the style cost
-            J_style = compute_style_cost(sess, self.model, STYLE_LAYERS)
+        # Assign the input of the model to be the "style" image
+        sess.run(self.model['input'].assign(style_image))
 
-            J = total_cost(J_content, J_style)
+        # Compute the style cost
+        J_style = compute_style_cost(sess, self.model, STYLE_LAYERS)
 
-            # define optimizer (1 line)
-            optimizer = tf.train.AdamOptimizer(2.0)
+        J = total_cost(J_content, J_style)
 
-            # define train_step (1 line)
-            train_step = optimizer.minimize(J)
+        # define optimizer (1 line)
+        optimizer = tf.train.AdamOptimizer(2.0)
 
-            # Initialize global variables (you need to run the session on the initializer)
-            sess.run(tf.global_variables_initializer())
+        # define train_step (1 line)
+        train_step = optimizer.minimize(J)
 
-            # Run the noisy input image (initial generated image) through the model. Use assign().
-            sess.run(self.model['input'].assign(input_image))
+        # Initialize global variables (you need to run the session on the initializer)
+        sess.run(tf.global_variables_initializer())
 
-            for i in range(num_iterations):
+        # Run the noisy input image (initial generated image) through the model. Use assign().
+        sess.run(self.model['input'].assign(input_image))
 
-                # Run the session on the train_step to minimize the total cost
-                sess.run(train_step)
+        for i in range(num_iterations):
 
-                # Compute the generated image by running the session on the current model['input']
-                generated_image = sess.run(self.model['input'])
+            # Run the session on the train_step to minimize the total cost
+            sess.run(train_step)
 
-                # Print every 20 iteration.
-                if i % 20 == 0:
-                    Jt, Jc, Js = sess.run([J, J_content, J_style])
-                    print("Iteration " + str(i) + " :")
-                    print("total cost = " + str(Jt))
-                    print("content cost = " + str(Jc))
-                    print("style cost = " + str(Js))
+            # Compute the generated image by running the session on the current model['input']
+            generated_image = sess.run(self.model['input'])
 
-                    # save current generated image in the "/output" directory
-                    save_image(output_dir_path + "/" + str(i) + ".png", generated_image)
+            # Print every 2 iteration.
+            if i % 2 == 0:
+                Jt, Jc, Js = sess.run([J, J_content, J_style])
+                print("Iteration " + str(i) + " :")
+                print("total cost = " + str(Jt))
+                print("content cost = " + str(Jc))
+                print("style cost = " + str(Js))
+
+            # Save every 20 iteration.
+            if i % 20 == 0:
+                # save current generated image in the "/output" directory
+                save_image(output_dir_path + "/" + str(i) + ".png", generated_image)
 
         # save last generated image
         save_image(output_dir_path + '/generated_image.jpg', generated_image)
