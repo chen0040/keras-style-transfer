@@ -60,6 +60,7 @@ def gram_matrix(A):
 
     return GA
 
+
 def gram_matrix_test():
     tf.reset_default_graph()
 
@@ -99,6 +100,7 @@ def compute_layer_style_cost(a_S, a_G):
     ### END CODE HERE ###
 
     return J_style_layer
+
 
 def compute_layer_style_cost_test():
     tf.reset_default_graph()
@@ -149,6 +151,7 @@ def compute_style_cost(sess, model, STYLE_LAYERS):
 
     return J_style
 
+
 def total_cost(J_content, J_style, alpha=10, beta=40):
     """
     Computes the total cost function
@@ -168,6 +171,7 @@ def total_cost(J_content, J_style, alpha=10, beta=40):
     ### END CODE HERE ###
 
     return J
+
 
 def total_cost_test():
     tf.reset_default_graph()
@@ -190,9 +194,6 @@ class StyleTransfer(object):
         self.model = load_vgg_model(vgg19_model_path)
         print(self.model)
 
-    def generate_noise_image(self, content_image):
-        return generate_noise_image(content_image)
-
     def fit(self, content_image, style_image, output_dir_path, num_iterations=200):
         STYLE_LAYERS = [
             ('conv1_1', 0.2),
@@ -201,13 +202,17 @@ class StyleTransfer(object):
             ('conv4_1', 0.2),
             ('conv5_1', 0.2)]
 
-        input_image = generate_noise_image(content_image)
+        content_image = np.expand_dims(content_image, axis=0)
+        style_image = np.expand_dims(style_image, axis=0)
+
 
         # Reset the graph
         tf.reset_default_graph()
 
         # Start interactive session
         sess = tf.InteractiveSession()
+
+        input_image = generate_noise_image(content_image)
 
         # Assign the content image to be the input of the VGG model.
         sess.run(self.model['input'].assign(content_image))
@@ -240,7 +245,6 @@ class StyleTransfer(object):
         # define train_step (1 line)
         train_step = optimizer.minimize(J)
 
-
         # Initialize global variables (you need to run the session on the initializer)
         sess.run(tf.global_variables_initializer())
 
@@ -270,6 +274,7 @@ class StyleTransfer(object):
         save_image(output_dir_path + '/generated_image.jpg', generated_image)
 
         return generated_image
+
 
 def main():
     compute_content_cost_test()
