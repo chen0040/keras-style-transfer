@@ -35,14 +35,22 @@ def main():
     generated_image = ss.fit_and_transform(content_image, style_image,
                                            output_dir_path=output_dir_path)
 
-    imshow(generated_image)
-
 
 if __name__ == '__main__':
     main()
 ```
 
-# Note 
+Below is the content image:
+
+![content-image](keras_style_transfer/training/images/louvre_small.jpg)
+
+Below is the style image:
+
+![style-image](keras_style_transfer/training/images/monet.jpg)
+
+Below is the generated image from the content image and the style image
+
+![generated-image](keras_style_transfer/training/outputs/generated_image.jpg)
 
 # Note
 The utility class [keras_style_transfer/library/nst_utils.py](keras_style_transfer/library/nst_utils.py) 

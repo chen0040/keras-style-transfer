@@ -22,7 +22,6 @@ def main():
     generated_image = ss.fit_and_transform(content_image, style_image,
                                            output_dir_path=output_dir_path)
 
-    imshow(generated_image)
 
 
 if __name__ == '__main__':
