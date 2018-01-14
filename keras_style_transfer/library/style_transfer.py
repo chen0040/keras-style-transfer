@@ -1,10 +1,3 @@
-import os
-import sys
-import scipy.io
-import scipy.misc
-import matplotlib.pyplot as plt
-from PIL import Image
-import keras.backend as K
 from keras_style_transfer.library.nst_utils import *
 from keras_style_transfer.library.download_utils import download_vgg19
 import numpy as np
@@ -82,7 +75,6 @@ def compute_layer_style_cost(a_S, a_G):
     J_style_layer -- tensor representing a scalar value, style cost defined above by equation (2)
     """
 
-    ### START CODE HERE ###
     # Retrieve dimensions from a_G (≈1 line)
     m, n_H, n_W, n_C = a_G.get_shape().as_list()
 
@@ -96,8 +88,6 @@ def compute_layer_style_cost(a_S, a_G):
 
     # Computing the loss (≈1 line)
     J_style_layer = tf.divide(tf.reduce_sum(tf.square(tf.subtract(GS, GG))), 4 * n_C * n_C * (n_H * n_W) * (n_H * n_W))
-
-    ### END CODE HERE ###
 
     return J_style_layer
 
@@ -166,9 +156,7 @@ def total_cost(J_content, J_style, alpha=10, beta=40):
     J -- total cost as defined by the formula above.
     """
 
-    ### START CODE HERE ### (≈1 line)
     J = J_content * alpha + J_style * beta
-    ### END CODE HERE ###
 
     return J
 
@@ -202,73 +190,71 @@ class StyleTransfer(object):
             ('conv4_1', 0.2),
             ('conv5_1', 0.2)]
 
-        content_image = np.expand_dims(content_image, axis=0)
-        style_image = np.expand_dims(style_image, axis=0)
+        content_image = reshape_and_normalize_image(content_image)
+        style_image = reshape_and_normalize_image(style_image)
 
+        input_image = generate_noise_image(content_image)
 
         # Reset the graph
         tf.reset_default_graph()
 
-        # Start interactive session
-        sess = tf.InteractiveSession()
+        with tf.Session() as sess:
 
-        input_image = generate_noise_image(content_image)
+            # Assign the content image to be the input of the VGG model.
+            sess.run(self.model['input'].assign(content_image))
 
-        # Assign the content image to be the input of the VGG model.
-        sess.run(self.model['input'].assign(content_image))
+            # Select the output tensor of layer conv4_2
+            out = self.model['conv4_2']
 
-        # Select the output tensor of layer conv4_2
-        out = self.model['conv4_2']
+            # Set a_C to be the hidden layer activation from the layer we have selected
+            a_C = sess.run(out)
 
-        # Set a_C to be the hidden layer activation from the layer we have selected
-        a_C = sess.run(out)
+            # Set a_G to be the hidden layer activation from same layer. Here, a_G references model['conv4_2']
+            # and isn't evaluated yet. Later in the code, we'll assign the image G as the model input, so that
+            # when we run the session, this will be the activations drawn from the appropriate layer, with G as input.
+            a_G = out
 
-        # Set a_G to be the hidden layer activation from same layer. Here, a_G references model['conv4_2']
-        # and isn't evaluated yet. Later in the code, we'll assign the image G as the model input, so that
-        # when we run the session, this will be the activations drawn from the appropriate layer, with G as input.
-        a_G = out
+            # Compute the content cost
+            J_content = compute_content_cost(a_C, a_G)
 
-        # Compute the content cost
-        J_content = compute_content_cost(a_C, a_G)
+            # Assign the input of the model to be the "style" image
+            sess.run(self.model['input'].assign(style_image))
 
-        # Assign the input of the model to be the "style" image
-        sess.run(self.model['input'].assign(style_image))
+            # Compute the style cost
+            J_style = compute_style_cost(sess, self.model, STYLE_LAYERS)
 
-        # Compute the style cost
-        J_style = compute_style_cost(sess, self.model, STYLE_LAYERS)
+            J = total_cost(J_content, J_style)
 
-        J = total_cost(J_content, J_style)
+            # define optimizer (1 line)
+            optimizer = tf.train.AdamOptimizer(2.0)
 
-        # define optimizer (1 line)
-        optimizer = tf.train.AdamOptimizer(2.0)
+            # define train_step (1 line)
+            train_step = optimizer.minimize(J)
 
-        # define train_step (1 line)
-        train_step = optimizer.minimize(J)
+            # Initialize global variables (you need to run the session on the initializer)
+            sess.run(tf.global_variables_initializer())
 
-        # Initialize global variables (you need to run the session on the initializer)
-        sess.run(tf.global_variables_initializer())
+            # Run the noisy input image (initial generated image) through the model. Use assign().
+            sess.run(self.model['input'].assign(input_image))
 
-        # Run the noisy input image (initial generated image) through the model. Use assign().
-        sess.run(self.model['input'].assign(input_image))
+            for i in range(num_iterations):
 
-        for i in range(num_iterations):
+                # Run the session on the train_step to minimize the total cost
+                sess.run(train_step)
 
-            # Run the session on the train_step to minimize the total cost
-            sess.run(train_step)
+                # Compute the generated image by running the session on the current model['input']
+                generated_image = sess.run(self.model['input'])
 
-            # Compute the generated image by running the session on the current model['input']
-            generated_image = sess.run(self.model['input'])
+                # Print every 20 iteration.
+                if i % 20 == 0:
+                    Jt, Jc, Js = sess.run([J, J_content, J_style])
+                    print("Iteration " + str(i) + " :")
+                    print("total cost = " + str(Jt))
+                    print("content cost = " + str(Jc))
+                    print("style cost = " + str(Js))
 
-            # Print every 20 iteration.
-            if i % 20 == 0:
-                Jt, Jc, Js = sess.run([J, J_content, J_style])
-                print("Iteration " + str(i) + " :")
-                print("total cost = " + str(Jt))
-                print("content cost = " + str(Jc))
-                print("style cost = " + str(Js))
-
-                # save current generated image in the "/output" directory
-                save_image(output_dir_path + "/" + str(i) + ".png", generated_image)
+                    # save current generated image in the "/output" directory
+                    save_image(output_dir_path + "/" + str(i) + ".png", generated_image)
 
         # save last generated image
         save_image(output_dir_path + '/generated_image.jpg', generated_image)
