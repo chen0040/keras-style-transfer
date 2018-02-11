@@ -6,9 +6,9 @@ from keras_style_transfer.library.style_transfer import StyleTransfer
 
 
 def main():
-    pretrained_model_dir_path = '../training/pretrained-model'
-    image_dir_path = '../training/images'
-    output_dir_path = '../training/outputs'
+    pretrained_model_dir_path = './pretrained-model'
+    image_dir_path = './images'
+    output_dir_path = './outputs'
 
     content_image = scipy.misc.imread(image_dir_path + "/louvre_small.jpg")
     imshow(content_image)
