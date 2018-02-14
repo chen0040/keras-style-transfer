@@ -7,7 +7,7 @@ The source code of the neural style transfer can be found in
 
 # Usage
 
-The demo code can be found in [keras_style_transfer/demo/style_transfer.py](keras_style_transfer/demo/style_transfer.py)
+The demo code can be found in [demo/style_transfer.py](demo/style_transfer.py)
 It is illustrated below, which takes in a content image and a style image to generate a new image.
 
 ```python
@@ -42,15 +42,15 @@ if __name__ == '__main__':
 
 Below is the content image:
 
-![content-image](keras_style_transfer/demo/images/louvre_small.jpg)
+![content-image](demo/images/louvre_small.jpg)
 
 Below is the style image:
 
-![style-image](keras_style_transfer/demo/images/monet.jpg)
+![style-image](demo/images/monet.jpg)
 
 Below is the generated image from the content image and the style image
 
-![generated-image](keras_style_transfer/demo/outputs/generated_image.jpg)
+![generated-image](demo/outputs/generated_image.jpg)
 
 # Note
 The utility class [keras_style_transfer/library/nst_utils.py](keras_style_transfer/library/nst_utils.py) 
